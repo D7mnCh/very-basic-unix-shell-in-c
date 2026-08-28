@@ -4,7 +4,7 @@
     - ls(stdout) -> current
     - cat(stdin)
     - history(stdout)
-    - piping
+    - ~~piping~~
 
 
 # Reads
