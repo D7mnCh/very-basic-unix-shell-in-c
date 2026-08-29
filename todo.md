@@ -5,7 +5,7 @@
     - cat(stdin)
     - history(stdout)
     - ~~piping~~
-
+- maybe integrate shells commands by using my shell?
 
 # Reads
 - https://publications.gbdirect.co.uk/c_book/chapter10/arguments_to_main.html
