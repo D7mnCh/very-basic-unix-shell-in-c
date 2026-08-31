@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdbool.h>
+#include<dirent.h>
 #define ESC_KEY 27 // == ^[
 #define PROMPT_DOLLAR_SYMBOL "$"
 
@@ -25,17 +26,6 @@ Command get_command(char *command_buffer) {
     }
 }
 
-void is_full_command_valid(Command command, size_t num_args) {
-    // TODO i need also to check if the argument is valid
-    if (command == (Command)LS && num_args > 1) {
-        printf("expected ls with one argument\n");
-    }else if (command == (Command)CAT && num_args > 1) {
-        printf("expected cat with one argument\n");
-    }else if (command == (Command)HISTORY && num_args > 0) {
-        printf("expected hisotry with no argument\n");
-    }
-}
- 
 void clean_screen() {
     printf("%c[2J",ESC_KEY);
 }
@@ -44,8 +34,58 @@ void cursor_top () {
     printf("%c[H",ESC_KEY);
 }
 
-void run_command(char *buffer){}
-void run_ls_command(char *buffer){}
+void run_ls_command(char *arg){
+    // ls [empty] == ls .
+    if (!arg) {
+        arg = ".";
+    }
+
+    DIR *dir_stream = opendir(arg);
+    if (dir_stream == NULL) {
+        perror(arg);
+        return;
+    }
+
+    struct dirent *dir = NULL;
+    while (dir = readdir(dir_stream)) {
+        printf("%s\t", dir->d_name);
+    }
+    printf("\n");
+
+    if (closedir(dir_stream) != 0) {
+        perror(arg);
+        return;
+    }
+}
+
+bool check_args_len(Command command, size_t num_args) {
+    if (command == (Command)LS && num_args > 1u) {
+        printf("expected ls command with one argument\n");
+        return false;
+    }else if (command == (Command)CAT && num_args > 1u) {
+        printf("expected cat command with one argument\n");
+        return false;
+    }else if (command == (Command)HISTORY && num_args > 0) {
+        printf("expected hisotry command with no argument\n");
+        return false;
+    }
+    return true;
+}
+ 
+
+void run_command(Command command, char* arg, size_t num_args){
+    if (check_args_len(command, num_args) == false) {
+        return;
+    }
+
+    switch (command) {
+        case LS: run_ls_command(arg);break;
+        case CAT: printf("didn't impl cat yet\n");break;
+        case HISTORY: printf("didn't implt history yet\n");break;
+        default: printf("unreachable: should handled None Command \
+                        varient before calling this function\n");
+    }
+}
 
 // TODO make functions
 void run() {
@@ -55,29 +95,34 @@ void run() {
 
         printf("%s ", PROMPT_DOLLAR_SYMBOL);
 
+        // TODO ignore any escape keycode as an input
         if (getline(&buffer, &bufferlen, stdin) == -1) {
             printf("[Error] Failed to read line");
         }
 
         char *token = strtok(buffer, " \n");
-        // printf("command is : %s\n", token);
+        if (token == NULL) {
+            continue;
+        }
+
         Command command = get_command(token);
         if (command == (Command)None) {
             continue;
         }
 
-        // NOTE you didn't store arg token
         size_t num_args = 0;
+        char* arg = NULL;
         while (true) {
             token = strtok(NULL, " \n");
             if (token == NULL) {
                 break;
             }
+            arg = token;
             // printf("token -> %s\n", token);
             num_args++;
         }
 
-        is_full_command_valid(command, num_args);
+        run_command(command, arg, num_args);
     }
 }
 
