@@ -3,17 +3,22 @@
 #include<stdbool.h>
 #include<dirent.h>
 #define ESC_KEY 27 // == ^[
-#define PROMPT_DOLLAR_SYMBOL "$"
 
 typedef enum {
     LS,
     CAT,
     HISTORY,
-    None
+    Empty,
+    NotBuiltIn,
 }Command;
 
 // Desrialization
 Command get_command(char *command_buffer) {
+    // check if token is empty, it can cuz segfault inside strcmp()
+    if (command_buffer == NULL) {
+        return (Command)Empty;
+    }
+
     if (!strcmp(command_buffer, "ls")) {
         return (Command)LS;
     }else if (!strcmp(command_buffer, "cat")) {
@@ -21,8 +26,7 @@ Command get_command(char *command_buffer) {
     } else if (!strcmp(command_buffer, "history")) {
         return (Command)HISTORY;
     }else {
-        printf("%s: command not found\n", command_buffer);
-        return (Command)None;
+        return (Command)NotBuiltIn;
     }
 }
 
@@ -40,6 +44,7 @@ void run_ls_command(char *arg){
         arg = ".";
     }
 
+    // setup direcotry stream
     DIR *dir_stream = opendir(arg);
     if (dir_stream == NULL) {
         perror(arg);
@@ -52,6 +57,7 @@ void run_ls_command(char *arg){
     }
     printf("\n");
 
+    // clean-up resources(allocation) made by the dir_stream
     if (closedir(dir_stream) != 0) {
         perror(arg);
         return;
@@ -71,7 +77,6 @@ bool check_args_len(Command command, size_t num_args) {
     }
     return true;
 }
- 
 
 void run_command(Command command, char* arg, size_t num_args){
     if (check_args_len(command, num_args) == false) {
@@ -82,9 +87,13 @@ void run_command(Command command, char* arg, size_t num_args){
         case LS: run_ls_command(arg);break;
         case CAT: printf("didn't impl cat yet\n");break;
         case HISTORY: printf("didn't implt history yet\n");break;
-        default: printf("unreachable: should handled None Command \
-                        varient before calling this function\n");
+        default: printf("unreachable: should handled Empty and NotBuiltIn\
+                        and Command varient before calling this function\n");
     }
+}
+
+void prompt_with_symbol(const char symbol) {
+    printf("%c ",symbol);
 }
 
 // TODO make functions
@@ -93,36 +102,43 @@ void run() {
         char *buffer = NULL;
         size_t bufferlen = 0; 
 
-        printf("%s ", PROMPT_DOLLAR_SYMBOL);
+        prompt_with_symbol('$');
 
         // TODO ignore any escape keycode as an input
         if (getline(&buffer, &bufferlen, stdin) == -1) {
             printf("[Error] Failed to read line");
         }
 
+        // parse input to transformt it into string of tokens
         char *token = strtok(buffer, " \n");
-        if (token == NULL) {
-            continue;
-        }
 
         Command command = get_command(token);
-        if (command == (Command)None) {
+
+        // i want to make a func for this block but idk what to name it 
+        if (command == (Command)NotBuiltIn) {
+            printf("%s: command not found\n", token);
+            continue;
+        }else if (command == (Command)Empty) {
             continue;
         }
 
         size_t num_args = 0;
-        char* arg = NULL;
+        // my builtin commands accept < 1 arguments, no needs for
+        //multiple strings to store
+        char *arg = NULL;
         while (true) {
+            // check for more tokens
             token = strtok(NULL, " \n");
             if (token == NULL) {
                 break;
             }
+
             arg = token;
-            // printf("token -> %s\n", token);
             num_args++;
         }
 
         run_command(command, arg, num_args);
+
     }
 }
 
